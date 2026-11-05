@@ -87,6 +87,9 @@ class _HomePageState extends State<HomePage> {
 
   void _showBluetoothDialog() {
     _bleManager.startScan();
+    int dotCount = 1;
+    Timer? dotTimer;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -96,9 +99,16 @@ class _HomePageState extends State<HomePage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            dotTimer ??= Timer.periodic(const Duration(milliseconds: 400), (_) {
+              if (mounted) {
+                dotCount = (dotCount % 5) + 1;
+                setModalState(() {});
+              }
+            });
+
             return Container(
               padding: const EdgeInsets.all(20),
-              height: 400,
+              height: 420,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -156,45 +166,57 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 10),
                   ],
                   Expanded(
-                    child: _bleManager.scanResults.isEmpty
-                        ? Center(
+                    child: StreamBuilder<List<ScanResult>>(
+                      stream: FlutterBluePlus.scanResults,
+                      initialData: _bleManager.scanResults,
+                      builder: (context, snapshot) {
+                        final results = snapshot.data ?? [];
+                        if (results.isEmpty) {
+                          final dots = '.' * dotCount;
+                          return Center(
                             child: Text(
                               _bleManager.isScanning
-                                  ? '주변 블루투스 기기 검색 중...'
+                                  ? '기기 검색 중$dots'
                                   : '검색된 기기가 없습니다.',
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 15,
+                              ),
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: _bleManager.scanResults.length,
-                            itemBuilder: (context, index) {
-                              final data = _bleManager.scanResults[index];
-                              final name = data.device.platformName.isNotEmpty
-                                  ? data.device.platformName
-                                  : (data.advertisementData.advName.isNotEmpty
-                                        ? data.advertisementData.advName
-                                        : 'Unknown Device');
-                              return ListTile(
-                                title: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: results.length,
+                          itemBuilder: (context, index) {
+                            final data = results[index];
+                            final name = data.device.platformName.isNotEmpty
+                                ? data.device.platformName
+                                : (data.advertisementData.advName.isNotEmpty
+                                      ? data.advertisementData.advName
+                                      : 'Unknown Device');
+                            return ListTile(
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                subtitle: Text(data.device.remoteId.toString()),
-                                trailing: ElevatedButton(
-                                  onPressed: () {
-                                    _bleManager.connect(
-                                      data.device,
-                                      () => setState(() {}),
-                                    );
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text('연결'),
-                                ),
-                              );
-                            },
-                          ),
+                              ),
+                              subtitle: Text(data.device.remoteId.toString()),
+                              trailing: ElevatedButton(
+                                onPressed: () {
+                                  _bleManager.connect(
+                                    data.device,
+                                    () => setState(() {}),
+                                  );
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('연결'),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -203,6 +225,7 @@ class _HomePageState extends State<HomePage> {
         );
       },
     ).whenComplete(() {
+      dotTimer?.cancel();
       _bleManager.stopScan();
     });
   }
@@ -384,7 +407,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                   if (_isRunning) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 15),
                     const Divider(),
                     const SizedBox(height: 8),
                     Row(
@@ -406,7 +429,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                   const SizedBox(height: 12),
                   Text(
-                    '첫 입력을 즉시 시작하고, 각 반복 시작 지점을 기준으로 계산한 예상 횟수입니다.',
+                    '첫 입력을 즉시 시작하고, 각 반복 시작 지점을 기준으로 계산한 예상 [`시작`]입니다.',
                     style: TextStyle(color: Colors.grey[500], fontSize: 11),
                   ),
                 ],
@@ -456,10 +479,10 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
