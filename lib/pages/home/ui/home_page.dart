@@ -320,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                   _isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
                 ),
                 label: Text(
-                  _isRunning ? '중지 (시뮬레이션)' : '시작 (시뮬레이션)',
+                  _isRunning ? (isConnected ? '오토클리커 중지' : '중지 (시뮬레이션)') : (isConnected ? '오토클리커 시작' : '시작 (시뮬레이션)'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
