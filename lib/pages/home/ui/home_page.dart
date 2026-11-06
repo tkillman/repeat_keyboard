@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -167,7 +167,11 @@ class _HomePageState extends State<HomePage> {
                   ],
                   Expanded(
                     child: StreamBuilder<List<ScanResult>>(
-                      stream: FlutterBluePlus.scanResults,
+                      stream: FlutterBluePlus.scanResults.map(
+                        (results) => results
+                            .where(BleManager.isRepeatAduDevice)
+                            .toList(),
+                      ),
                       initialData: _bleManager.scanResults,
                       builder: (context, snapshot) {
                         final results = snapshot.data ?? [];
@@ -297,6 +301,33 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: _toggleRunning,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isRunning
+                      ? Colors.redAccent
+                      : Colors.black87,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                icon: Icon(
+                  _isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                ),
+                label: Text(
+                  _isRunning ? '중지 (시뮬레이션)' : '시작 (시뮬레이션)',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -433,34 +464,6 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.grey[500], fontSize: 11),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton.icon(
-                onPressed: _toggleRunning,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isRunning
-                      ? Colors.redAccent
-                      : Colors.black87,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                icon: Icon(
-                  _isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                ),
-                label: Text(
-                  _isRunning ? '중지 (시뮬레이션)' : '시작 (시뮬레이션)',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ),
           ],

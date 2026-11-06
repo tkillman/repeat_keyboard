@@ -11,9 +11,20 @@ class BleManager {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connSub;
 
+  static bool isRepeatAduDevice(ScanResult result) {
+    final name = result.device.platformName.isNotEmpty
+        ? result.device.platformName
+        : result.advertisementData.advName;
+    final hasName = name.toLowerCase().contains('repeatadu');
+    final hasService = result.advertisementData.serviceUuids.any(
+      (uuid) => uuid.toString().toLowerCase().contains('4fafc201'),
+    );
+    return hasName || hasService;
+  }
+
   void init(VoidCallback onUpdate) {
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
-      scanResults = results;
+      scanResults = results.where(isRepeatAduDevice).toList();
       onUpdate();
     });
     FlutterBluePlus.isScanning.listen((scanning) {
