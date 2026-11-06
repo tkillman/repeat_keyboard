@@ -36,6 +36,24 @@ class _HomePageState extends State<HomePage> {
     _bleManager.init(() {
       if (mounted) setState(() {});
     });
+    _bleManager.onTelemetry = (data) {
+      if (!mounted) return;
+      setState(() {
+        if (data['executedCount'] != null) {
+          _executedCount = (data['executedCount'] as num).toInt();
+        }
+        if (data['remainingSec'] != null) {
+          _remainingSeconds = (data['remainingSec'] as num).toInt();
+        }
+        final state = data['state'];
+        if (state == 'COMPLETED' || state == 'IDLE') {
+          _isRunning = false;
+          _timer?.cancel();
+        } else if (state == 'RUNNING' || state == 'PRESSING') {
+          _isRunning = true;
+        }
+      });
+    };
   }
 
   @override
@@ -60,13 +78,45 @@ class _HomePageState extends State<HomePage> {
       if (_isRunning) {
         _remainingSeconds = (_settings.totalMinutes * 60).toInt();
         _executedCount = 0;
-        _startSimulation();
+        if (_bleManager.isConnected) {
+          // BLE 연결됨: 칩에 START 명령 전송, 로컬 타이머는 잔여시간 표시용만 사용
+          _bleManager.sendCommand({
+            'cmd': 'START',
+            'totalMin': _settings.totalMinutes,
+            'intervalSec': _settings.intervalSeconds,
+            'holdSec': _settings.holdSeconds,
+          });
+          _startLocalTimer(); // executedCount는 telemetry에서만 갱신
+        } else {
+          // BLE 미연결: 로컬 시뮬레이션 모드
+          _startSimulation();
+        }
       } else {
+        if (_bleManager.isConnected) {
+          _bleManager.sendCommand({'cmd': 'STOP'});
+        }
         _timer?.cancel();
       }
     });
   }
 
+  // BLE 연결 시: 잔여 시간만 카운트 (executedCount는 telemetry 단독 사용)
+  void _startLocalTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+        } else {
+          _isRunning = false;
+          _timer?.cancel();
+        }
+      });
+    });
+  }
+
+  // BLE 미연결 시: 앱 자체 시뮬레이션 (executedCount 자체 계산)
   void _startSimulation() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
