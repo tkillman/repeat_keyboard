@@ -111,4 +111,12 @@ void main() {
 
     expect(padding.bottom, greaterThan(16));
   });
+
+  testWidgets('defaults the press angle input to 75 degrees', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+    expect(fields, hasLength(5));
+    expect(fields.last.controller!.text, '75');
+  });
 }

@@ -27,6 +27,9 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _holdSecondsController = TextEditingController(
     text: '1',
   );
+  final TextEditingController _pressAngleController = TextEditingController(
+    text: '75',
+  );
 
   final AutoclickerRunStatus _runStatus = AutoclickerRunStatus();
   int _remainingSeconds = 0;
@@ -78,6 +81,7 @@ class _HomePageState extends State<HomePage> {
     _intervalMinSecondsController.dispose();
     _intervalMaxSecondsController.dispose();
     _holdSecondsController.dispose();
+    _pressAngleController.dispose();
     super.dispose();
   }
 
@@ -89,6 +93,9 @@ class _HomePageState extends State<HomePage> {
         double.tryParse(_intervalMaxSecondsController.text) ?? 10.0,
     holdSeconds: double.tryParse(_holdSecondsController.text) ?? 1.0,
   );
+
+  int get _pressAngle =>
+      (int.tryParse(_pressAngleController.text) ?? 75).clamp(0, 180).toInt();
 
   void _toggleRunning() {
     final settings = _settings;
@@ -113,6 +120,7 @@ class _HomePageState extends State<HomePage> {
             'intervalMinSec': settings.intervalMinSeconds,
             'intervalMaxSec': settings.intervalMaxSeconds,
             'holdSec': _settings.holdSeconds,
+            'pressAngle': _pressAngle,
           });
           _startConfirmationTimer?.cancel();
           _startConfirmationTimer = Timer(const Duration(seconds: 5), () {
@@ -507,6 +515,12 @@ class _HomePageState extends State<HomePage> {
                   _buildNumberField(
                     label: '키 누르고 있는 시간 (초)',
                     controller: _holdSecondsController,
+                    enabled: !_isRunning,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildNumberField(
+                    label: '키 누름 회전각도 (도)',
+                    controller: _pressAngleController,
                     enabled: !_isRunning,
                   ),
                 ],
