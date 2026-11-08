@@ -86,4 +86,17 @@ void main() {
 
     expect(find.text('실행 횟수: 12회 (예상 12~12회)'), findsOneWidget);
   });
+
+  testWidgets('keeps the running summary inside a narrow screen', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.tap(find.text('시작 (시뮬레이션)'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
 }

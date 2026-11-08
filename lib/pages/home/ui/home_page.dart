@@ -238,8 +238,8 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'ESP32-C3 블루투스 기기 검색',
@@ -539,8 +539,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,8 +564,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 14),
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '키 누름 지속 시간',
@@ -591,13 +592,14 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 15),
                     const Divider(),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           '남은 시간: ${_remainingSeconds ~/ 60}분 ${_remainingSeconds % 60}초',
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
+                        const SizedBox(height: 6),
                         Text(
                           '실행 횟수: $_executedCount회 '
                           '(예상 ${settings.minimumExpectedCount}~${settings.maximumExpectedCount}회)',
