@@ -1,16 +1,24 @@
 class AutoclickerSettings {
   final double totalMinutes;
-  final double intervalSeconds;
+  final double intervalMinSeconds;
+  final double intervalMaxSeconds;
   final double holdSeconds;
 
   AutoclickerSettings({
     required this.totalMinutes,
-    required this.intervalSeconds,
+    required this.intervalMinSeconds,
+    required this.intervalMaxSeconds,
     required this.holdSeconds,
   });
 
+  double get averageIntervalSeconds =>
+      (intervalMinSeconds + intervalMaxSeconds) / 2;
+
+  bool get isIntervalRangeValid =>
+      intervalMinSeconds > 0 && intervalMaxSeconds >= intervalMinSeconds;
+
   int get expectedCount {
-    if (intervalSeconds <= 0) return 0;
-    return ((totalMinutes * 60) / intervalSeconds).floor();
+    if (!isIntervalRangeValid) return 0;
+    return ((totalMinutes * 60) / averageIntervalSeconds).floor();
   }
 }
