@@ -1,5 +1,7 @@
 ﻿import 'dart:async';
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -17,8 +19,10 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _totalMinutesController = TextEditingController(
     text: '30',
   );
-  final TextEditingController _intervalSecondsController =
+  final TextEditingController _intervalMinSecondsController =
       TextEditingController(text: '5');
+  final TextEditingController _intervalMaxSecondsController =
+      TextEditingController(text: '10');
   final TextEditingController _holdSecondsController = TextEditingController(
     text: '0.2',
   );
@@ -27,6 +31,9 @@ class _HomePageState extends State<HomePage> {
   int _remainingSeconds = 0;
   int _executedCount = 0;
   Timer? _timer;
+  final Random _random = Random();
+  double _simulationElapsedSeconds = 0;
+  double _nextSimulationClickAt = 0;
 
   final BleManager _bleManager = BleManager();
 
@@ -61,18 +68,32 @@ class _HomePageState extends State<HomePage> {
     _timer?.cancel();
     _bleManager.dispose();
     _totalMinutesController.dispose();
-    _intervalSecondsController.dispose();
+    _intervalMinSecondsController.dispose();
+    _intervalMaxSecondsController.dispose();
     _holdSecondsController.dispose();
     super.dispose();
   }
 
   AutoclickerSettings get _settings => AutoclickerSettings(
     totalMinutes: double.tryParse(_totalMinutesController.text) ?? 30.0,
-    intervalSeconds: double.tryParse(_intervalSecondsController.text) ?? 5.0,
+    intervalMinSeconds:
+        double.tryParse(_intervalMinSecondsController.text) ?? 5.0,
+    intervalMaxSeconds:
+        double.tryParse(_intervalMaxSecondsController.text) ?? 10.0,
     holdSeconds: double.tryParse(_holdSecondsController.text) ?? 0.2,
   );
 
   void _toggleRunning() {
+    final settings = _settings;
+    if (!_isRunning && !settings.isIntervalRangeValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('최대 반복 주기는 최소 반복 주기 이상이어야 합니다.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isRunning = !_isRunning;
       if (_isRunning) {
@@ -83,7 +104,8 @@ class _HomePageState extends State<HomePage> {
           _bleManager.sendCommand({
             'cmd': 'START',
             'totalMin': _settings.totalMinutes,
-            'intervalSec': _settings.intervalSeconds,
+            'intervalMinSec': settings.intervalMinSeconds,
+            'intervalMaxSec': settings.intervalMaxSeconds,
             'holdSec': _settings.holdSeconds,
           });
           _startLocalTimer(); // executedCount는 telemetry에서만 갱신
@@ -119,13 +141,17 @@ class _HomePageState extends State<HomePage> {
   // BLE 미연결 시: 앱 자체 시뮬레이션 (executedCount 자체 계산)
   void _startSimulation() {
     _timer?.cancel();
+    _simulationElapsedSeconds = 0;
+    _nextSimulationClickAt = _randomIntervalSeconds();
+    _executedCount = 1;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
-          double elapsed = (_settings.totalMinutes * 60) - _remainingSeconds;
-          if (_settings.intervalSeconds > 0) {
-            _executedCount = (elapsed / _settings.intervalSeconds).floor();
+          _simulationElapsedSeconds++;
+          if (_simulationElapsedSeconds >= _nextSimulationClickAt) {
+            _executedCount++;
+            _nextSimulationClickAt += _randomIntervalSeconds();
           }
         } else {
           _isRunning = false;
@@ -133,6 +159,16 @@ class _HomePageState extends State<HomePage> {
         }
       });
     });
+  }
+
+  double _randomIntervalSeconds() {
+    final settings = _settings;
+    if (settings.intervalMinSeconds == settings.intervalMaxSeconds) {
+      return settings.intervalMinSeconds;
+    }
+    return settings.intervalMinSeconds +
+        _random.nextDouble() *
+            (settings.intervalMaxSeconds - settings.intervalMinSeconds);
   }
 
   void _showBluetoothDialog() {
@@ -401,8 +437,14 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 20),
                   _buildNumberField(
-                    label: '반복 주기 (초)',
-                    controller: _intervalSecondsController,
+                    label: '최소 반복 주기 (초)',
+                    controller: _intervalMinSecondsController,
+                    enabled: !_isRunning,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildNumberField(
+                    label: '최대 반복 주기 (초)',
+                    controller: _intervalMaxSecondsController,
                     enabled: !_isRunning,
                   ),
                   const SizedBox(height: 20),
