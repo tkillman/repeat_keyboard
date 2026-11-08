@@ -149,9 +149,15 @@ class _HomePageState extends State<HomePage> {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
           _simulationElapsedSeconds++;
-          if (_simulationElapsedSeconds >= _nextSimulationClickAt) {
+          final totalSeconds = _settings.totalMinutes * 60;
+          while (_nextSimulationClickAt < totalSeconds &&
+              _simulationElapsedSeconds >= _nextSimulationClickAt) {
             _executedCount++;
             _nextSimulationClickAt += _randomIntervalSeconds();
+          }
+          if (_remainingSeconds == 0) {
+            _isRunning = false;
+            _timer?.cancel();
           }
         } else {
           _isRunning = false;
@@ -497,7 +503,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${settings.expectedCount}회',
+                            '약 ${settings.expectedCount}회 '
+                            '(${settings.minimumExpectedCount}~${settings.maximumExpectedCount}회)',
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -541,7 +548,8 @@ class _HomePageState extends State<HomePage> {
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '실행 횟수: $_executedCount / ${settings.expectedCount}',
+                          '실행 횟수: $_executedCount회 '
+                          '(예상 ${settings.minimumExpectedCount}~${settings.maximumExpectedCount}회)',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green,
@@ -552,7 +560,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                   const SizedBox(height: 12),
                   Text(
-                    '첫 입력을 즉시 시작하고, 각 반복 시작 지점을 기준으로 계산한 예상 [`시작`]입니다.',
+                    '첫 입력은 즉시 시작하며, 예상 횟수는 랜덤 주기 범위의 평균값을 기준으로 계산합니다.',
                     style: TextStyle(color: Colors.grey[500], fontSize: 11),
                   ),
                 ],

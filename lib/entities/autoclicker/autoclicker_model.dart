@@ -21,4 +21,14 @@ class AutoclickerSettings {
     if (!isIntervalRangeValid) return 0;
     return ((totalMinutes * 60) / averageIntervalSeconds).floor();
   }
+
+  int get minimumExpectedCount {
+    if (!isIntervalRangeValid) return 0;
+    return ((totalMinutes * 60) / intervalMaxSeconds).floor();
+  }
+
+  int get maximumExpectedCount {
+    if (!isIntervalRangeValid) return 0;
+    return ((totalMinutes * 60) / intervalMinSeconds).floor();
+  }
 }

@@ -14,6 +14,8 @@ void main() {
 
     expect(settings.averageIntervalSeconds, 7.5);
     expect(settings.expectedCount, 8);
+    expect(settings.minimumExpectedCount, 6);
+    expect(settings.maximumExpectedCount, 12);
   });
 
   test('rejects an interval range whose maximum is less than its minimum', () {
@@ -51,5 +53,30 @@ void main() {
 
     expect(find.text('최대 반복 주기는 최소 반복 주기 이상이어야 합니다.'),
         findsOneWidget);
+  });
+
+  testWidgets('shows an approximate count and possible range for a random interval',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    expect(find.text('약 240회 (180~360회)'), findsOneWidget);
+  });
+
+  testWidgets('simulates a fixed five-second interval without an extra final click',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '1');
+    await tester.enterText(fields.at(1), '5');
+    await tester.enterText(fields.at(2), '5');
+    await tester.tap(find.text('시작 (시뮬레이션)'));
+    await tester.pump();
+
+    for (var second = 0; second < 55; second++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    expect(find.text('실행 횟수: 12회 (예상 12~12회)'), findsOneWidget);
   });
 }
