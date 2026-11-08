@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _intervalMaxSecondsController =
       TextEditingController(text: '10');
   final TextEditingController _holdSecondsController = TextEditingController(
-    text: '0.2',
+    text: '1',
   );
 
   final AutoclickerRunStatus _runStatus = AutoclickerRunStatus();
@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
         double.tryParse(_intervalMinSecondsController.text) ?? 5.0,
     intervalMaxSeconds:
         double.tryParse(_intervalMaxSecondsController.text) ?? 10.0,
-    holdSeconds: double.tryParse(_holdSecondsController.text) ?? 0.2,
+    holdSeconds: double.tryParse(_holdSecondsController.text) ?? 1.0,
   );
 
   void _toggleRunning() {
@@ -95,9 +95,7 @@ class _HomePageState extends State<HomePage> {
     if (_runStatus.isStartPending) return;
     if (_runStatus.isIdle && !settings.isIntervalRangeValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('최대 반복 주기는 최소 반복 주기 이상이어야 합니다.'),
-        ),
+        const SnackBar(content: Text('최대 반복 주기는 최소 반복 주기 이상이어야 합니다.')),
       );
       return;
     }
