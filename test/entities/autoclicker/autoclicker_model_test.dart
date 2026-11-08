@@ -99,4 +99,16 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('leaves extra space below content for system navigation',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    final scrollView = tester.widget<SingleChildScrollView>(
+      find.byType(SingleChildScrollView),
+    );
+    final padding = scrollView.padding! as EdgeInsets;
+
+    expect(padding.bottom, greaterThan(16));
+  });
 }

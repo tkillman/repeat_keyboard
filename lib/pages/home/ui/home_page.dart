@@ -364,6 +364,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final bool isConnected = _bleManager.connectedDevice != null;
     final settings = _settings;
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -414,7 +415,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 40 + bottomSafeArea),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
