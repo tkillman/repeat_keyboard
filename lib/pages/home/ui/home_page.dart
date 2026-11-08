@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../entities/autoclicker/autoclicker_model.dart';
+import '../../../entities/autoclicker/run_status.dart';
 import '../../../features/bluetooth/model/ble_manager.dart';
 
 class HomePage extends StatefulWidget {
@@ -27,15 +28,18 @@ class _HomePageState extends State<HomePage> {
     text: '0.2',
   );
 
-  bool _isRunning = false;
+  final AutoclickerRunStatus _runStatus = AutoclickerRunStatus();
   int _remainingSeconds = 0;
   int _executedCount = 0;
   Timer? _timer;
+  Timer? _startConfirmationTimer;
   final Random _random = Random();
   double _simulationElapsedSeconds = 0;
   double _nextSimulationClickAt = 0;
 
   final BleManager _bleManager = BleManager();
+
+  bool get _isRunning => _runStatus.isActive;
 
   @override
   void initState() {
@@ -52,12 +56,14 @@ class _HomePageState extends State<HomePage> {
         if (data['remainingSec'] != null) {
           _remainingSeconds = (data['remainingSec'] as num).toInt();
         }
-        final state = data['state'];
-        if (state == 'COMPLETED' || state == 'IDLE') {
-          _isRunning = false;
+        final state = data['state'] as String?;
+        final wasStartPending = _runStatus.isStartPending;
+        _runStatus.applyTelemetry(state);
+        if (wasStartPending && !_runStatus.isStartPending) {
+          _startConfirmationTimer?.cancel();
+        }
+        if (_runStatus.isIdle) {
           _timer?.cancel();
-        } else if (state == 'RUNNING' || state == 'PRESSING') {
-          _isRunning = true;
         }
       });
     };
@@ -66,6 +72,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _startConfirmationTimer?.cancel();
     _bleManager.dispose();
     _totalMinutesController.dispose();
     _intervalMinSecondsController.dispose();
@@ -85,7 +92,8 @@ class _HomePageState extends State<HomePage> {
 
   void _toggleRunning() {
     final settings = _settings;
-    if (!_isRunning && !settings.isIntervalRangeValid) {
+    if (_runStatus.isStartPending) return;
+    if (_runStatus.isIdle && !settings.isIntervalRangeValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('최대 반복 주기는 최소 반복 주기 이상이어야 합니다.'),
@@ -95,11 +103,11 @@ class _HomePageState extends State<HomePage> {
     }
 
     setState(() {
-      _isRunning = !_isRunning;
-      if (_isRunning) {
+      if (_runStatus.isIdle) {
         _remainingSeconds = (_settings.totalMinutes * 60).toInt();
         _executedCount = 0;
         if (_bleManager.isConnected) {
+          _runStatus.requestStart();
           // BLE 연결됨: 칩에 START 명령 전송, 로컬 타이머는 잔여시간 표시용만 사용
           _bleManager.sendCommand({
             'cmd': 'START',
@@ -108,12 +116,23 @@ class _HomePageState extends State<HomePage> {
             'intervalMaxSec': settings.intervalMaxSeconds,
             'holdSec': _settings.holdSeconds,
           });
+          _startConfirmationTimer?.cancel();
+          _startConfirmationTimer = Timer(const Duration(seconds: 5), () {
+            if (!mounted || !_runStatus.isStartPending) return;
+            setState(_runStatus.cancelStartRequest);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('기기 시작 확인 시간이 초과되었습니다.')),
+            );
+          });
           _startLocalTimer(); // executedCount는 telemetry에서만 갱신
         } else {
           // BLE 미연결: 로컬 시뮬레이션 모드
+          _runStatus.startLocally();
           _startSimulation();
         }
       } else {
+        _runStatus.stop();
+        _startConfirmationTimer?.cancel();
         if (_bleManager.isConnected) {
           _bleManager.sendCommand({'cmd': 'STOP'});
         }
@@ -131,7 +150,7 @@ class _HomePageState extends State<HomePage> {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
         } else {
-          _isRunning = false;
+          _runStatus.stop();
           _timer?.cancel();
         }
       });
@@ -156,11 +175,11 @@ class _HomePageState extends State<HomePage> {
             _nextSimulationClickAt += _randomIntervalSeconds();
           }
           if (_remainingSeconds == 0) {
-            _isRunning = false;
+            _runStatus.stop();
             _timer?.cancel();
           }
         } else {
-          _isRunning = false;
+          _runStatus.stop();
           _timer?.cancel();
         }
       });
@@ -365,7 +384,9 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Center(
                 child: Text(
-                  _isRunning ? '실행 중' : '대기',
+                  _runStatus.isStartPending
+                      ? '시작 확인 중'
+                      : (_isRunning ? '실행 중' : '대기'),
                   style: TextStyle(
                     color: _isRunning ? Colors.green[800] : Colors.grey[700],
                     fontWeight: FontWeight.bold,
@@ -397,7 +418,7 @@ class _HomePageState extends State<HomePage> {
               width: double.infinity,
               height: 54,
               child: ElevatedButton.icon(
-                onPressed: _toggleRunning,
+                onPressed: _runStatus.isStartPending ? null : _toggleRunning,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isRunning
                       ? Colors.redAccent
@@ -408,11 +429,17 @@ class _HomePageState extends State<HomePage> {
                   ),
                   elevation: 0,
                 ),
-                icon: Icon(
-                  _isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                ),
+                icon: Icon(_runStatus.isStartPending
+                    ? Icons.hourglass_top_rounded
+                    : (_isRunning
+                        ? Icons.stop_rounded
+                        : Icons.play_arrow_rounded)),
                 label: Text(
-                  _isRunning ? (isConnected ? '오토클리커 중지' : '중지 (시뮬레이션)') : (isConnected ? '오토클리커 시작' : '시작 (시뮬레이션)'),
+                  _runStatus.isStartPending
+                      ? '기기 시작 확인 중...'
+                      : (_isRunning
+                          ? (isConnected ? '오토클리커 중지' : '중지 (시뮬레이션)')
+                          : (isConnected ? '오토클리커 시작' : '시작 (시뮬레이션)')),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
