@@ -141,6 +141,21 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _resetExecution() {
+    _timer?.cancel();
+    _startConfirmationTimer?.cancel();
+    setState(() {
+      _runStatus.stop();
+      _remainingSeconds = 0;
+      _executedCount = 0;
+      _simulationElapsedSeconds = 0;
+      _nextSimulationClickAt = 0;
+    });
+    if (_bleManager.isConnected) {
+      _bleManager.sendCommand({'cmd': 'RESET'});
+    }
+  }
+
   // BLE 연결 시: 잔여 시간만 카운트 (executedCount는 telemetry 단독 사용)
   void _startLocalTimer() {
     _timer?.cancel();
@@ -445,6 +460,15 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _resetExecution,
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: const Text('실행 상태 초기화'),
               ),
             ),
             Container(

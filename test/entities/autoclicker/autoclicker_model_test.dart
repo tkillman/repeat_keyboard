@@ -62,6 +62,13 @@ void main() {
     expect(find.text('약 240회 (180~360회)'), findsOneWidget);
   });
 
+  testWidgets('shows a reset button for returning the execution state to idle',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    expect(find.text('실행 상태 초기화'), findsOneWidget);
+  });
+
   testWidgets('simulates a fixed five-second interval without an extra final click',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: HomePage()));
